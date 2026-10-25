@@ -98,7 +98,17 @@ Pokemon Channel:
 (day, Nice Cards, Poke Points, whether you've done something yet), and lists the addresses that match every
 label. Needs `pip install numpy dolphin-memory-engine`.
 
-Use RAM snapshots, taken while you play. Comparing save files doesn't work for this game: Pokemon Channel
+The easy way: with the game running in Dolphin, run
+
+```
+python tools/find_addresses.py record
+```
+
+Answer two questions (current day, Nice Cards), play normally until you've slept at least once and picked up a
+Nice Card, then press Ctrl+C and answer the same two questions. It finds the day counter and where Nice Cards are
+kept, and writes them to `tools/snapshots/record_result.txt`.
+
+For anything else, take labelled RAM snapshots while you play. Comparing save files doesn't work for this game: Pokemon Channel
 scrambles its saves (XOR with a 35-byte key that shifts depending on the contents), so the script refuses them.
 
 RAM snapshots also catch things that are never saved (current channel, where Pikachu is):

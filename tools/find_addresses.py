@@ -8,7 +8,11 @@ snapshots, and the more the labels differ between them, the shorter the list.
 
     pip install numpy dolphin-memory-engine
 
-    # with the game running in Dolphin, take RAM snapshots as you play
+    # easiest: start this, play normally (sleep at least once, pick up a Nice Card), then press Ctrl+C.
+    # It asks for the day and your Nice Card count at the start and at the end, and that's all.
+    python find_addresses.py record
+
+    # or take labelled RAM snapshots by hand as you play
     python find_addresses.py capture day1     --day 1 --cards 0  --flag watched_pnf=false
     python find_addresses.py capture day1_pnf --day 1 --cards 0  --flag watched_pnf=true
     python find_addresses.py capture day2     --day 2 --cards 4  --flag watched_pnf=true
@@ -31,6 +35,7 @@ Labels:
 
 import argparse
 import json
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -94,7 +99,7 @@ def add_snapshot(manifest: dict, kind: str, name: str, file: str, labels: dict) 
     print(f"Saved snapshot '{name}' ({len(manifest['snapshots'])} in set).")
 
 
-def read_mem1() -> bytes:
+def hook_dolphin():
     import dolphin_memory_engine as dme
 
     dme.hook()
@@ -103,6 +108,11 @@ def read_mem1() -> bytes:
     game_id = dme.read_bytes(MEM1_BASE, 6)
     if game_id not in GAME_IDS:
         raise SystemExit(f"Dolphin is running {game_id!r}, not Pokemon Channel.")
+    return dme
+
+
+def read_mem1(dme=None) -> bytes:
+    dme = dme or hook_dolphin()
     chunk = 0x100000
     return b"".join(dme.read_bytes(MEM1_BASE + off, chunk) for off in range(0, MEM1_SIZE, chunk))
 
@@ -275,6 +285,90 @@ def cmd_locate(args: argparse.Namespace) -> None:
     print("Check it with a fresh 'capture' after loading a different save: the copy may move.")
 
 
+def ask_number(question: str) -> int:
+    while True:
+        answer = input(question).strip()
+        if answer.isdigit():
+            return int(answer)
+        print("Please type a number.")
+
+
+def cmd_record(args: argparse.Namespace) -> None:
+    dme = hook_dolphin()
+    print("Load your save in Dolphin and get to where you can move Pikachu around.")
+    start_day = ask_number("What day is it in the game right now? ")
+    start_cards = ask_number("How many Nice Cards do you have right now? ")
+
+    first = np.frombuffer(read_mem1(dme), dtype=np.uint8).copy()
+    prev = first.copy()
+    bad_step = np.zeros(len(first), dtype=bool)  # changed by something other than +1
+    cleared = np.zeros(len(first), dtype=np.uint8)  # bits that were ever switched off
+    samples = 0
+    print("\nRecording. Play normally: sleep at least once and pick up a Nice Card or two.")
+    print("Press Ctrl+C when you're done.\n")
+    started = time.monotonic()
+    try:
+        while True:
+            time.sleep(args.interval)
+            if not dme.is_hooked():
+                print("Lost Dolphin. Stopping.")
+                break
+            cur = np.frombuffer(read_mem1(dme), dtype=np.uint8)
+            changed = cur != prev
+            bad_step |= changed & (cur != prev + np.uint8(1))
+            cleared |= prev & ~cur
+            prev = cur.copy()
+            samples += 1
+            if samples % 20 == 0:
+                print(f"  {int(time.monotonic() - started)}s recorded", end="\r")
+    except KeyboardInterrupt:
+        pass
+    last = prev
+    print(f"\nStopped after {samples} samples.")
+    end_day = ask_number("What day is it now? ")
+    end_cards = ask_number("How many Nice Cards do you have now? ")
+
+    report: list[str] = []
+
+    def out(line: str = "") -> None:
+        print(line)
+        report.append(line)
+
+    if end_day > start_day:
+        hits = []
+        for shift, note in ((0, ""), (1, " (counts from 0)")):
+            m = ~bad_step & (first == start_day - shift) & (last == end_day - shift)
+            hits += [f"{MEM1_BASE + off:#010x}  8-bit{note}" for off in np.flatnonzero(m)]
+        out(f"\nDay: {len(hits) or 'no'} candidate(s)")
+        out("\n".join("    " + h for h in hits[:MAX_PRINTED]))
+    else:
+        out("\nDay: you didn't sleep, so it can't be found from this recording.")
+
+    if end_cards > start_cards:
+        hits = []
+        m = ~bad_step & (first == start_cards) & (last == end_cards)
+        hits += [f"{MEM1_BASE + off:#010x}  8-bit count" for off in np.flatnonzero(m)]
+        never_cleared = np.concatenate(([0], np.cumsum(cleared != 0)))
+        pop_first = np.concatenate(([0], np.cumsum(POPCOUNT[first])))
+        pop_last = np.concatenate(([0], np.cumsum(POPCOUNT[last])))
+        for length in CARD_FIELD_BYTES:
+            w = ((never_cleared[length:] - never_cleared[:-length]) == 0) \
+                & ((pop_first[length:] - pop_first[:-length]) == start_cards) \
+                & ((pop_last[length:] - pop_last[:-length]) == end_cards)
+            hits += [f"{MEM1_BASE + off:#010x}  {length} bytes, one bit per card" for off in np.flatnonzero(w)]
+        out(f"\nNice Cards: {len(hits) or 'no'} candidate(s)")
+        out("\n".join("    " + h for h in hits[:MAX_PRINTED]))
+        if len(hits) > MAX_PRINTED:
+            out(f"    ... and {len(hits) - MAX_PRINTED} more: record again and get a few more cards.")
+    else:
+        out("\nNice Cards: you didn't get any, so they can't be found from this recording.")
+
+    ROOT.mkdir(exist_ok=True)
+    result = ROOT / "record_result.txt"
+    result.write_text("\n".join(report) + "\n")
+    print(f"\nSaved to {result}. Send that file over.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -285,6 +379,10 @@ def main() -> None:
         p.add_argument("--points", type=int)
         p.add_argument("--value", action="append", metavar="NAME=N")
         p.add_argument("--flag", action="append", metavar="NAME=true|false")
+
+    p = sub.add_parser("record", help="watch Dolphin while you play and find the day and Nice Cards")
+    p.add_argument("--interval", type=float, default=0.5, help="seconds between reads (default 0.5)")
+    p.set_defaults(func=cmd_record)
 
     p = sub.add_parser("capture", help="snapshot Dolphin's RAM now")
     p.add_argument("name")
