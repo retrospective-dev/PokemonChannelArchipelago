@@ -1,4 +1,4 @@
-# PokemonChannelArchipelago
+# Pokemon Channel Archipelago
 
 An [Archipelago](https://archipelago.gg) world for **Pokemon Channel** (GameCube, 2003).
 
