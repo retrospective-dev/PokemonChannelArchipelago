@@ -16,7 +16,10 @@ games and reaching Nice Card totals send checks.
    double-click it, or drop it in `Archipelago/custom_worlds`.
 3. In the Archipelago Launcher, use **Generate Template Options** to get `Pokemon Channel.yaml`.
 
-To build it yourself: `zip -r pokemon_channel.apworld pokemon_channel -x "*/__pycache__/*"`
+To build it yourself, copy the `pokemon_channel` folder into `Archipelago/worlds/`, then open the Launcher and run
+**Build APWorlds** (or `python Launcher.py "Build APWorlds" -- "Pokemon Channel"` from a source checkout). The file
+lands in `build/apworlds/`. Don't just zip the folder: Archipelago needs the manifest that Build APWorlds writes, and
+plain zips stop loading in 0.7.0.
 
 ## Items
 
