@@ -60,5 +60,11 @@ class PokemonChannelWorld(World):
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         return self.options.as_dict(
-            "goal", "nice_card_goal", "nice_card_checks", "channel_shuffle", "pokemon_mini_checks"
+            "goal",
+            "nice_card_goal",
+            "nice_card_checks",
+            "nice_card_interval",
+            "repeat_checks",
+            "channel_shuffle",
+            "pokemon_mini_checks",
         )

@@ -14,6 +14,14 @@ Pokemon mini games and reaching Nice Card totals send checks.
 - **Channel: ...** (Channel Shuffle only): lets you watch that program.
 - Filler: Poke Points and room decorations.
 
+## How long is it?
+
+From about 28 checks up to 277. For the long version, turn on every Nice Card (`nice_card_interval: 1`,
+`nice_card_checks: 110`) and post-game repeat checks (`repeat_checks: 10`), or pick the "Long" preset.
+
+Repeat checks and Nice Card totals above 30 are post-game: once you have all 5 Progressive Days and have seen the
+day 6 ending, you can sleep as much as you like.
+
 ## What is the goal?
 
 Either reach the day 6 ending, or collect a set number of Nice Cards.

@@ -36,7 +36,11 @@ To build it yourself: `zip -r pokemon_channel.apworld pokemon_channel -x "*/__py
 - Win the Quiz Wobbuffet Present Quiz; finish a painting in Smeargle's Art Study
 - Visit Viridian Forest, Cobalt Coast and Mt. Snowfall
 - Play each Pokemon mini game (optional)
-- Every 5 Nice Cards collected, up to a set number (optional)
+- Nice Card totals, every 1-10 cards up to all 110 (optional)
+- Post-game repeats: watch each program, visit each region and win the Present Quiz on 2-10 different days (optional)
+
+Location count ranges from 28 (Short preset) to 277 (Long preset), so it can keep pace with big games in the
+same multiworld.
 
 ## Options
 
@@ -45,9 +49,31 @@ To build it yourself: `zip -r pokemon_channel.apworld pokemon_channel -x "*/__py
 | `goal` | `finish_story` | `finish_story` (day 6 ending) or `nice_cards` |
 | `nice_card_goal` | 60 | Nice Cards needed for the `nice_cards` goal |
 | `nice_card_checks` | 60 | Highest Nice Card count that sends a check (0 = off) |
+| `nice_card_interval` | 5 | A Nice Card check every this many cards (1 = every card) |
+| `repeat_checks` | 1 | Post-game "on N days" checks up to this many days (1 = off, each step adds 15 checks) |
 | `channel_shuffle` | off | Lock every program except Professor Oak's Report behind an item |
 | `pokemon_mini_checks` | on | Checks for playing each Pokemon mini game |
 | `starting_pass` | `none` | Start with a bus pass: `viridian`, `cobalt`, `snowfall` or `any` |
+
+### Presets
+
+- **Short:** about 28 checks, a quick story run.
+- **Long (for big multiworlds):** 277 checks. Every Nice Card, repeats up to 10 days, Channel Shuffle on, goal is
+  all 110 cards. Use this next to long games like Kingdom Hearts 2 or Sekiro.
+
+```yaml
+name: YourName
+game: Pokemon Channel
+Pokemon Channel:
+  goal: nice_cards
+  nice_card_goal: 110
+  nice_card_checks: 110
+  nice_card_interval: 1
+  repeat_checks: 10
+  channel_shuffle: true
+  pokemon_mini_checks: true
+  starting_pass: any
+```
 
 ## Playing
 
@@ -55,7 +81,9 @@ To build it yourself: `zip -r pokemon_channel.apworld pokemon_channel -x "*/__py
 2. Open **Pokemon Channel Client** from the Launcher and connect.
 3. Only go to bed when you have the next Progressive Day, only take the bus with the pass, and with Channel Shuffle
    only watch channels you've received.
-4. Client commands:
+4. Once you have all 5 Progressive Days and have seen the day 6 ending, you're in the post-game: sleep as much as you
+   like. Repeat checks and Nice Card totals above 30 all live here.
+5. Client commands:
    - `/check <location>`: send a check (part of the name is enough)
    - `/todo`: list what's left
    - `/goal`: send your win

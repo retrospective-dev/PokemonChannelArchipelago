@@ -75,3 +75,11 @@ POKEMON_MINI_GAMES = (
 )
 
 NICE_CARD_MILESTONE_STEP = 5
+
+# Repeat checks ("Watch PNF on 3 Days") go up to this many days. They all count as post-game:
+# once every Progressive Day is in, the player can sleep freely, so a late channel or pass
+# can never leave one of them out of reach.
+MAX_REPEAT = 10
+REPEATABLE_PROGRAMS = tuple(
+    p for p in PROGRAMS if p.name not in ("Professor Oak's Report", "Pichu Bros. in Party Panic")
+)

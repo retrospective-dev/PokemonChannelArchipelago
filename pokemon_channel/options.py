@@ -39,6 +39,32 @@ class NiceCardChecks(Range):
     default = 60
 
 
+class NiceCardInterval(Range):
+    """
+    Send a Nice Card check every this many cards. 1 makes every card a check;
+    use it with Nice Card Checks 110 for a long game.
+    """
+
+    display_name = "Nice Card Interval"
+    range_start = 1
+    range_end = 10
+    default = 5
+
+
+class RepeatChecks(Range):
+    """
+    Extra post-game checks for doing things on more than one day: watching each program,
+    visiting each region and winning the Present Quiz on 2, 3, ... up to this many days.
+    1 turns them off. Each step adds 15 checks.
+    After you have every Progressive Day and have seen day 6, you can sleep as much as you like.
+    """
+
+    display_name = "Repeat Checks"
+    range_start = 1
+    range_end = 10
+    default = 1
+
+
 class ChannelShuffle(Toggle):
     """
     Every program except Professor Oak's Report starts locked and has to be found as an item,
@@ -72,6 +98,27 @@ class PokemonChannelOptions(PerGameCommonOptions):
     goal: Goal
     nice_card_goal: NiceCardGoal
     nice_card_checks: NiceCardChecks
+    nice_card_interval: NiceCardInterval
+    repeat_checks: RepeatChecks
     channel_shuffle: ChannelShuffle
     pokemon_mini_checks: PokemonMiniChecks
     starting_pass: StartingPass
+
+
+option_presets = {
+    "Long (for big multiworlds)": {
+        "goal": "nice_cards",
+        "nice_card_goal": 110,
+        "nice_card_checks": 110,
+        "nice_card_interval": 1,
+        "repeat_checks": 10,
+        "channel_shuffle": True,
+        "pokemon_mini_checks": True,
+        "starting_pass": "any",
+    },
+    "Short": {
+        "nice_card_checks": 0,
+        "repeat_checks": 1,
+        "pokemon_mini_checks": False,
+    },
+}
