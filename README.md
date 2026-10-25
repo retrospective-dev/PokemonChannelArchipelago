@@ -12,7 +12,7 @@ games and reaching Nice Card totals send checks.
 ## Install
 
 1. Get Archipelago 0.6.7 or newer.
-2. Download `pokemon_channel.apworld` from [Releases](../../releases) (or the latest Actions run) and
+2. Download `pokemon_channel.apworld` from [Releases](../../releases) and
    double-click it, or drop it in `Archipelago/custom_worlds`.
 3. In the Archipelago Launcher, use **Generate Template Options** to get `Pokemon Channel.yaml`.
 
