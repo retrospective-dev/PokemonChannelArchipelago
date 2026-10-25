@@ -285,18 +285,20 @@ def cmd_locate(args: argparse.Namespace) -> None:
     print("Check it with a fresh 'capture' after loading a different save: the copy may move.")
 
 
-def ask_number(question: str) -> int:
+def ask_number(question: str, allow_blank: bool = False) -> int | None:
     while True:
         answer = input(question).strip()
         if answer.isdigit():
             return int(answer)
-        print("Please type a number.")
+        if allow_blank and not answer:
+            return None
+        print("Please type a number." + (" Or just press Enter if you don't know." if allow_blank else ""))
 
 
 def cmd_record(args: argparse.Namespace) -> None:
     dme = hook_dolphin()
     print("Load your save in Dolphin and get to where you can move Pikachu around.")
-    start_day = ask_number("What day is it in the game right now? ")
+    start_day = ask_number("What day is it in the game right now? (Enter if you don't know) ", allow_blank=True)
     start_cards = ask_number("How many Nice Cards do you have right now? ")
 
     first = np.frombuffer(read_mem1(dme), dtype=np.uint8).copy()
@@ -325,7 +327,12 @@ def cmd_record(args: argparse.Namespace) -> None:
         pass
     last = prev
     print(f"\nStopped after {samples} samples.")
-    end_day = ask_number("What day is it now? ")
+    if start_day is None:
+        slept = ask_number("How many times did you sleep? ")
+        end_day = None
+    else:
+        end_day = ask_number("What day is it now? ")
+        slept = end_day - start_day
     end_cards = ask_number("How many Nice Cards do you have now? ")
 
     report: list[str] = []
@@ -334,13 +341,19 @@ def cmd_record(args: argparse.Namespace) -> None:
         print(line)
         report.append(line)
 
-    if end_day > start_day:
+    if slept > 0:
         hits = []
-        for shift, note in ((0, ""), (1, " (counts from 0)")):
-            m = ~bad_step & (first == start_day - shift) & (last == end_day - shift)
-            hits += [f"{MEM1_BASE + off:#010x}  8-bit{note}" for off in np.flatnonzero(m)]
+        if start_day is None:
+            m = ~bad_step & (last.astype(np.int16) - first == slept)
+            hits += [f"{MEM1_BASE + off:#010x}  8-bit, now {last[off]}" for off in np.flatnonzero(m)]
+        else:
+            for shift, note in ((0, ""), (1, " (counts from 0)")):
+                m = ~bad_step & (first == start_day - shift) & (last == end_day - shift)
+                hits += [f"{MEM1_BASE + off:#010x}  8-bit{note}" for off in np.flatnonzero(m)]
         out(f"\nDay: {len(hits) or 'no'} candidate(s)")
         out("\n".join("    " + h for h in hits[:MAX_PRINTED]))
+        if len(hits) > MAX_PRINTED:
+            out(f"    ... and {len(hits) - MAX_PRINTED} more: record again and sleep a few more times.")
     else:
         out("\nDay: you didn't sleep, so it can't be found from this recording.")
 
@@ -360,6 +373,8 @@ def cmd_record(args: argparse.Namespace) -> None:
         out("\n".join("    " + h for h in hits[:MAX_PRINTED]))
         if len(hits) > MAX_PRINTED:
             out(f"    ... and {len(hits) - MAX_PRINTED} more: record again and get a few more cards.")
+    elif start_cards >= 110:
+        out("\nNice Cards: you already have them all, so there's nothing to watch. Use a save that's missing some.")
     else:
         out("\nNice Cards: you didn't get any, so they can't be found from this recording.")
 
