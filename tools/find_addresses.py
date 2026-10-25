@@ -14,7 +14,8 @@ snapshots, and the more the labels differ between them, the shorter the list.
     python find_addresses.py capture day2     --day 2 --cards 4  --flag watched_pnf=true
     python find_addresses.py analyze
 
-    # or compare save files (export them as .gci from Dolphin's Memory Card Manager)
+    # Comparing save files (.gci, or GameShark .sav) is supported, but Pokemon Channel scrambles its saves,
+    # so for this game the script stops and points you to 'capture'. Kept for games that don't.
     python find_addresses.py add new.gci       --day 1 --cards 0
     python find_addresses.py add day3.gci      --day 3 --cards 17
     python find_addresses.py add completed.gci --day 6 --cards 110
@@ -44,6 +45,10 @@ MAX_PRINTED = 20
 
 ROOT = Path(__file__).resolve().parent / "snapshots"
 MANIFEST = ROOT / "manifest.json"
+
+# Pokemon Channel XORs its save data with this 35-byte key, restarting it at points that depend on the
+# contents, so positions in a save don't line up between saves or with RAM.
+SAVE_SCRAMBLE_KEY = bytes.fromhex("c36dcf8adc4d516f9e76a4454684c90ecd4785782fe971a3fdf6625624163efab09668")
 
 POPCOUNT = np.array([bin(i).count("1") for i in range(256)], dtype=np.int32)
 
@@ -104,7 +109,9 @@ def read_mem1() -> bytes:
 
 def read_save(path: Path) -> bytes:
     data = path.read_bytes()
-    if path.suffix.lower() == ".gci":
+    if data.startswith(b"DATELGC_SAVE"):  # GameShark / Action Replay .sav: 0x80-byte header in front of the GCI
+        data = data[0x80:]
+    if path.suffix.lower() in (".gci", ".sav"):
         if data[:6] not in GAME_IDS:
             print(f"Warning: {path.name} doesn't look like a Pokemon Channel save ({data[:6]!r}).")
         data = data[GCI_HEADER:]
@@ -134,7 +141,8 @@ def load_arrays(manifest: dict) -> list[np.ndarray]:
         path = Path(snap["file"])
         if not path.is_absolute():
             path = ROOT / path
-        data = path.read_bytes() if manifest["kind"] == "ram" or path.suffix.lower() != ".gci" else read_save(path)
+        is_save = manifest["kind"] == "save" and path.suffix.lower() in (".gci", ".sav")
+        data = read_save(path) if is_save else path.read_bytes()
         arrays.append(np.frombuffer(data, dtype=np.uint8))
     size = min(len(a) for a in arrays)
     if any(len(a) != size for a in arrays):
@@ -214,6 +222,10 @@ def cmd_analyze(args: argparse.Namespace) -> None:
     if len(snaps) < 2:
         raise SystemExit("Need at least two snapshots to compare.")
     arrays = load_arrays(manifest)
+    if manifest["kind"] == "save" and any(SAVE_SCRAMBLE_KEY in a.tobytes() for a in arrays):
+        raise SystemExit("These saves are scrambled (Pokemon Channel XORs its save data with a shifting key), so "
+                         "comparing them gives meaningless results. Use RAM snapshots instead: run 'capture' "
+                         "with the game running in Dolphin.")
     base = MEM1_BASE if manifest["kind"] == "ram" else 0
     where = "RAM address" if base else "offset in the save (run 'locate' to turn these into RAM addresses)"
     print(f"Comparing {len(snaps)} {manifest['kind']} snapshots; results are {where}.")
@@ -243,6 +255,8 @@ def cmd_analyze(args: argparse.Namespace) -> None:
 
 def cmd_locate(args: argparse.Namespace) -> None:
     save = read_save(Path(args.save))
+    if SAVE_SCRAMBLE_KEY in save:
+        raise SystemExit("This save is scrambled, so it won't appear as-is in RAM. Use 'capture' instead.")
     ram = Path(args.ram).read_bytes() if args.ram else read_mem1()
     votes: Counter[int] = Counter()
     for off in range(0, len(save) - 32, 16):

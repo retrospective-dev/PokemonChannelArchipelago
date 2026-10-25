@@ -98,21 +98,10 @@ Pokemon Channel:
 (day, Nice Cards, Poke Points, whether you've done something yet), and lists the addresses that match every
 label. Needs `pip install numpy dolphin-memory-engine`.
 
-From save files (export them as `.gci` with Dolphin's **Tools > Memory Card Manager**):
+Use RAM snapshots, taken while you play. Comparing save files doesn't work for this game: Pokemon Channel
+scrambles its saves (XOR with a 35-byte key that shifts depending on the contents), so the script refuses them.
 
-```
-python tools/find_addresses.py add new.gci       --day 1 --cards 0  --flag watched_pnf=false
-python tools/find_addresses.py add day3.gci      --day 3 --cards 17 --flag watched_pnf=true
-python tools/find_addresses.py add completed.gci --day 6 --cards 110 --flag watched_pnf=true
-python tools/find_addresses.py analyze
-python tools/find_addresses.py locate completed.gci   # with that save loaded in Dolphin
-```
-
-`analyze` gives positions inside the save; `locate` tells you where the save sits in RAM, so
-RAM address = the address it prints + the position.
-
-Or straight from RAM while you play, which also catches things that only live in memory (current channel,
-where Pikachu is):
+RAM snapshots also catch things that are never saved (current channel, where Pikachu is):
 
 ```
 python tools/find_addresses.py capture day1_house  --day 1 --value area=0
@@ -120,7 +109,7 @@ python tools/find_addresses.py capture day1_forest --day 1 --value area=1
 python tools/find_addresses.py analyze
 ```
 
-One completed save on its own isn't enough: the script needs at least two snapshots where each value differs,
+The script needs at least two snapshots where each value differs,
 and every extra snapshot cuts the list down. Snapshots go in `tools/snapshots/`, which git ignores.
 
 ## Contributing
